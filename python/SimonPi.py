@@ -1,4 +1,5 @@
-#!/usr/bin/python
+#!/usr/bin/env python
+
 from time import sleep
 import RPi.GPIO as GPIO
 import sys
@@ -23,12 +24,16 @@ IN_TO_OUT = {
 # Color State
 RED, YELLOW, GREEN, BLUE = RED_IN, YELLOW_IN, GREEN_IN, BLUE_IN
 
-# Convert a color id to it's appropriate GPIO output channel
+# Sleep Times
+SLEEP_TIME_S, SLEEP_TIME_M, SLEEP_TIME_L, SLEEP_TIME_XL = .15, .25, .5, 1
+
+# Button Input Bounce
+BUTTON_INPUT_BOUNCE = 300
 
 # Game State
 STATE_SHOW_PATTERN, STATE_WAIT_FOR_INPUT, STATE_CHECKING_INPUT, STATE_ROUND_COMPLETE = 1, 2, 3, 4
 
-# Game Round Vars
+# Game Round
 ROUND = {
 	'pattern'      : [],
 	'pattern_left' : [],
@@ -47,6 +52,7 @@ def run():
 
 	show_pattern()
 
+    # the loop
 	loop = True
 
 	while loop:
@@ -60,39 +66,39 @@ def run():
 
 		if key_in == 'quit':
 			# Cleanup your GPIO settings!
+			print 'Quitting...\n'
 			GPIO.cleanup()
 			exit()
 
-# init - initialize the GPIO channels we are using and setup butotn input listen events
+# init - initialize the GPIO channels we are using and setup button input listen events
 def init():
 	# GPIO
+	GPIO.setwarnings(False) 
 	GPIO.setmode(GPIO.BOARD) 
-
-	input_bounce = 300
 
 	# red
 	GPIO.setup(RED_IN , GPIO.IN)
 	GPIO.setup(RED_OUT, GPIO.OUT, initial=GPIO.HIGH)
 
-	GPIO.add_event_detect(RED_IN, GPIO.BOTH, callback = button_event, bouncetime = input_bounce)
+	GPIO.add_event_detect(RED_IN, GPIO.BOTH, callback = button_event, bouncetime = BUTTON_INPUT_BOUNCE)
 
 	# yellow
 	GPIO.setup(YELLOW_IN , GPIO.IN)
 	GPIO.setup(YELLOW_OUT, GPIO.OUT, initial=GPIO.HIGH)
 
-	GPIO.add_event_detect(YELLOW_IN, GPIO.BOTH, callback = button_event, bouncetime = input_bounce)
+	GPIO.add_event_detect(YELLOW_IN, GPIO.BOTH, callback = button_event, bouncetime = BUTTON_INPUT_BOUNCE)
 
 	# green 
 	GPIO.setup(GREEN_IN , GPIO.IN)
 	GPIO.setup(GREEN_OUT, GPIO.OUT, initial=GPIO.HIGH)
 
-	GPIO.add_event_detect(GREEN_IN, GPIO.BOTH, callback = button_event, bouncetime = input_bounce)
+	GPIO.add_event_detect(GREEN_IN, GPIO.BOTH, callback = button_event, bouncetime = BUTTON_INPUT_BOUNCE)
 
 	# blue 
 	GPIO.setup(BLUE_IN , GPIO.IN)
 	GPIO.setup(BLUE_OUT, GPIO.OUT, initial=GPIO.HIGH)
 
-	GPIO.add_event_detect(BLUE_IN, GPIO.BOTH, callback = button_event, bouncetime = input_bounce)
+	GPIO.add_event_detect(BLUE_IN, GPIO.BOTH, callback = button_event, bouncetime = BUTTON_INPUT_BOUNCE)
 
 # button_event - respond to GPIO button input
 def button_event(channel):
@@ -111,7 +117,7 @@ def button_event(channel):
 
 		ROUND['state'] = STATE_WAIT_FOR_INPUT
 	else:
-		light_up([ channel ], .5)
+		light_up([ channel ], SLEEP_TIME_L)
 
 		check_pattern(channel)
 
@@ -139,15 +145,14 @@ def random_color():
 def show_pattern():
 	global ROUND
 
-	#sleep(2)
 	for color in ROUND['pattern']:
-		sleep(1)
+		sleep(SLEEP_TIME_XL)
 
 		light_up([color])
 
 	ROUND['state'] = STATE_WAIT_FOR_INPUT 
 
-# check_pattern - Check selected color against current pattern and respond accordingly
+# check_pattern - check selected color against current pattern and respond accordingly
 def check_pattern(color):
 	global ROUND
 
@@ -176,10 +181,10 @@ def check_pattern(color):
 
 		show_pattern()
 
-# light_up - Turn on the leds listed in color_list
+# light_up - turn on the leds listed in color_list
 def light_up(color_list, seconds = None):
 	if seconds is None:
-		seconds = 1
+		seconds = SLEEP_TIME_XL
 
 	for color in color_list:
 		GPIO.output(IN_TO_OUT[ color ], GPIO.LOW)
@@ -199,26 +204,24 @@ def turn_off_the_lights():
 def win_round():
 	turn_off_the_lights()
 
-	sleep(.15)
-	light_up([RED]   , .25)
-	light_up([YELLOW], .25)
-	light_up([GREEN] , .25)
-	light_up([BLUE]  , .25)
-	sleep(.15)
+	sleep(SLEEP_TIME_S)
+	light_up([RED]   , SLEEP_TIME_M)
+	light_up([YELLOW], SLEEP_TIME_M)
+	light_up([GREEN] , SLEEP_TIME_M)
+	light_up([BLUE]  , SLEEP_TIME_M)
+	sleep(SLEEP_TIME_S)
 
 # lose_round - show the player that they were incorrect for the current round
 def lose_round():
 	turn_off_the_lights()
 	
-	light_up([RED,YELLOW,GREEN,BLUE], .25)
+	light_up([RED,YELLOW,GREEN,BLUE], SLEEP_TIME_M)
+	sleep(SLEEP_TIME_M)
 
-	sleep(.25)
+	light_up([RED,YELLOW,GREEN,BLUE], SLEEP_TIME_M)
+	sleep(SLEEP_TIME_M)
 
-	light_up([RED,YELLOW,GREEN,BLUE], .25)
-
-	sleep(.25)
-
-	light_up([RED,YELLOW,GREEN,BLUE], .25)
+	light_up([RED,YELLOW,GREEN,BLUE], SLEEP_TIME_M)
 
 # EXECUTION
 
